@@ -76,7 +76,7 @@ public class Scanner {
 				// A comment goes until the end of the line.
 				while (peek() != '\n' && !isAtEnd()) advance();
 			} else if(match('*')) {
-				throw new RuntimeException("Unimplemented: block comment");
+				blockComment();
 			} else {
 				addToken(SLASH);
 			}
@@ -105,15 +105,19 @@ public class Scanner {
 
 	private void identifier() {
 		while (isAlphaNumeric(peek())) advance();
-	    // See if the identifier is a reserved word.
-	    String text = source.substring(start, current);
-	    TokenType type = keywords.get(text);
-	    if (type == null) type = IDENTIFIER;
-	    addToken(type);
+		// See if the identifier is a reserved word.
+		String text = source.substring(start, current);
+		TokenType type = keywords.get(text);
+		if (type == null) type = IDENTIFIER;
+		addToken(type);
 	}
 
 	private char advance() {
-		current++;
+		return advance(1);
+	}
+
+	private char advance(int distance) {
+		current += distance;
 		return source.charAt(current - 1);
 	}
 
@@ -142,24 +146,33 @@ public class Scanner {
 		if (current + 1 >= source.length()) return '\0';
 		return source.charAt(current + 1);
 	}
-	
-	  private boolean isAlpha(char c) {
-		    return (c >= 'a' && c <= 'z') ||
-		           (c >= 'A' && c <= 'Z') ||
-		            c == '_';
-		  }
 
-		  private boolean isAlphaNumeric(char c) {
-		    return isAlpha(c) || isDigit(c);
-		  }
+	private boolean isAlpha(char c) {
+		return (c >= 'a' && c <= 'z') ||
+				(c >= 'A' && c <= 'Z') ||
+				c == '_';
+	}
+
+	private boolean isAlphaNumeric(char c) {
+		return isAlpha(c) || isDigit(c);
+	}
 
 	private boolean isDigit(char c) {
 		return c >= '0' && c <= '9';
-	} 
+	}
+
+	private void blockComment() {
+		while(peek() != '*' && peekNext() != '/' && !isAtEnd()) {
+			advance();
+		}
+		if(isAtEnd()) {
+			Lox.error(start, "Unterminated block comment");
+		}
+		advance(2);
+	}
 
 	private void number() {
 		while (isDigit(peek())) advance();
-
 		// Look for a fractional part.
 		if (peek() == '.' && isDigit(peekNext())) {
 			// Consume the "."
@@ -167,7 +180,6 @@ public class Scanner {
 
 			while (isDigit(peek())) advance();
 		}
-
 		addToken(NUMBER,
 				Double.parseDouble(source.substring(start, current)));
 	}
